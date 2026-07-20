@@ -50,7 +50,12 @@ async function initDb() {
   `);
 
   await pool.query(`
-    ALTER TABLE urls ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
+    ALTER TABLE urls ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ;
+  `);
+
+  await pool.query(`
+    ALTER TABLE urls
+    ALTER COLUMN expires_at TYPE TIMESTAMPTZ USING expires_at AT TIME ZONE 'UTC';
   `);
 }
 

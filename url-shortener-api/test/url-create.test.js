@@ -10,6 +10,22 @@ function startServer() {
   });
 }
 
+test('GET /api-docs.json exposes the OpenAPI document', async () => {
+  const server = await startServer();
+  const address = server.address();
+
+  try {
+    const response = await fetch(`http://127.0.0.1:${address.port}/api-docs.json`);
+
+    assert.equal(response.status, 200);
+    const data = await response.json();
+    assert.equal(data.openapi, '3.0.3');
+    assert.ok(data.info.title.includes('URL Shortener API'));
+  } finally {
+    server.close();
+  }
+});
+
 test('POST /api/v1/urls creates a short URL', async () => {
   const server = await startServer();
   const address = server.address();

@@ -1,4 +1,6 @@
 const express = require('express');
+const swaggerUi = require('swagger-ui-express');
+const swaggerSpec = require('./swagger');
 const urlRoutes = require('./routes/urlRoutes');
 const authRoutes = require('./routes/authRoutes');
 const { initDb } = require('./config/db');
@@ -17,6 +19,10 @@ app.get('/', (req, res) => {
 
 app.use('/api/v1/auth', authRoutes);
 app.get('/api/v1/analytics/:shortCode', getAnalyticsData);
+app.get('/api-docs.json', (req, res) => {
+  res.json(swaggerSpec);
+});
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get('/:shortCode', redirectUrl);
 app.use('/api/v1/urls', authMiddleware, urlRoutes);
 app.use(errorHandler);

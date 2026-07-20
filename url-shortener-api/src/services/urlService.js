@@ -2,6 +2,30 @@ const { isValidHttpUrl, isValidCustomAlias, isValidExpirationDate } = require('.
 const { saveUrl, findByShortCode, findById, updateById, deleteById, recordClick, getAnalyticsByShortCode } = require('../repositories/urlRepository');
 const { getCachedValue, setCachedValue, deleteCachedValue } = require('../config/redis');
 
+function normalizeExpiresAt(value) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+
+  const parsedDate = new Date(value);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return value;
+  }
+
+  return parsedDate.toISOString();
+}
+
+function normalizeUrlRecord(record) {
+  if (!record) {
+    return record;
+  }
+
+  return {
+    ...record,
+    expiresAt: normalizeExpiresAt(record.expiresAt),
+  };
+}
+
 function generateShortCode(length = 6) {
   const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
@@ -46,11 +70,11 @@ async function createShortUrl({ originalUrl, customAlias, expiresAt, userId }) {
     originalUrl,
     shortCode,
     shortUrl: `http://localhost:3000/${shortCode}`,
-    expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+    expiresAt: normalizeExpiresAt(expiresAt),
     userId: userId || null,
   };
 
-  return saveUrl(urlRecord);
+  return saveUrl(urlRecord).then(normalizeUrlRecord);
 }
 
 async function getOriginalUrlByShortCode(shortCode) {
@@ -60,7 +84,7 @@ async function getOriginalUrlByShortCode(shortCode) {
     return cached;
   }
 
-  const record = await findByShortCode(shortCode);
+  const record = normalizeUrlRecord(await findByShortCode(shortCode));
   if (!record) {
     return null;
   }
@@ -93,7 +117,7 @@ async function getUrlById(id, userId) {
     return cached;
   }
 
-  const record = await findById(id);
+  const record = normalizeUrlRecord(await findById(id));
   if (!record) {
     return null;
   }
@@ -144,10 +168,10 @@ async function updateUrl(id, payload, userId) {
   }
 
   if (payload.expiresAt !== undefined) {
-    updates.expiresAt = payload.expiresAt ? new Date(payload.expiresAt).toISOString() : null;
+    updates.expiresAt = normalizeExpiresAt(payload.expiresAt);
   }
 
-  const updated = await updateById(id, updates);
+  const updated = normalizeUrlRecord(await updateById(id, updates));
   if (updated) {
     await setCachedValue(`url:id:${id}`, updated, 300);
     await deleteCachedValue(`url:${updated.shortCode}`);
