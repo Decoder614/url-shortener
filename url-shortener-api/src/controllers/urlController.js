@@ -1,4 +1,4 @@
-const { createShortUrl, getOriginalUrlByShortCode, getUrlById, updateUrl, deleteUrl, trackClick, getAnalytics, registerUser, loginUser } = require('../services/urlService');
+const { createShortUrl, getOriginalUrlByShortCode, getUrlById, updateUrl, deleteUrl, trackClick, getAnalytics } = require('../services/urlService');
 
 async function createUrl(req, res, next) {
   try {
@@ -88,24 +88,6 @@ async function getAnalyticsData(req, res, next) {
   }
 }
 
-async function register(req, res, next) {
-  try {
-    const result = await registerUser(req.body);
-    return res.status(201).json(result);
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function login(req, res, next) {
-  try {
-    const result = await loginUser(req.body);
-    return res.status(200).json(result);
-  } catch (error) {
-    return next(error);
-  }
-}
-
 module.exports = {
   createUrl,
   redirectUrl,
@@ -113,6 +95,4 @@ module.exports = {
   updateUrlRecord,
   deleteUrlRecord,
   getAnalyticsData,
-  register,
-  login,
 };

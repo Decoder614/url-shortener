@@ -1,7 +1,6 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const { isValidHttpUrl, isValidCustomAlias } = require('../validators/urlValidator');
-const { saveUrl, findByShortCode, findById, updateById, deleteById, recordClick, getAnalyticsByShortCode, createUser, findUserByEmail } = require('../repositories/urlRepository');
+const { saveUrl, findByShortCode, findById, updateById, deleteById, recordClick, getAnalyticsByShortCode } = require('../repositories/urlRepository');
+const { getCachedValue, setCachedValue, deleteCachedValue } = require('../config/redis');
 
 function generateShortCode(length = 6) {
   const alphabet = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -48,11 +47,35 @@ async function createShortUrl({ originalUrl, customAlias, userId }) {
 }
 
 async function getOriginalUrlByShortCode(shortCode) {
+  const cacheKey = `url:${shortCode}`;
+  const cached = await getCachedValue(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const record = await findByShortCode(shortCode);
-  return record ? record.originalUrl : null;
+  const originalUrl = record ? record.originalUrl : null;
+
+  if (originalUrl) {
+    await setCachedValue(cacheKey, originalUrl, 300);
+  }
+
+  return originalUrl;
 }
 
 async function getUrlById(id, userId) {
+  const cacheKey = `url:id:${id}`;
+  const cached = await getCachedValue(cacheKey);
+  if (cached) {
+    if (cached.userId && cached.userId !== userId) {
+      const error = new Error('Forbidden');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    return cached;
+  }
+
   const record = await findById(id);
   if (!record) {
     return null;
@@ -64,6 +87,7 @@ async function getUrlById(id, userId) {
     throw error;
   }
 
+  await setCachedValue(cacheKey, record, 300);
   return record;
 }
 
@@ -97,6 +121,10 @@ async function updateUrl(id, payload, userId) {
   }
 
   const updated = await updateById(id, updates);
+  if (updated) {
+    await setCachedValue(`url:id:${id}`, updated, 300);
+    await deleteCachedValue(`url:${updated.shortCode}`);
+  }
   return updated;
 }
 
@@ -115,6 +143,10 @@ async function deleteUrl(id, userId) {
   }
 
   const deleted = await deleteById(id);
+  if (deleted) {
+    await deleteCachedValue(`url:id:${id}`);
+    await deleteCachedValue(`url:${existing.shortCode}`);
+  }
   return deleted;
 }
 
@@ -141,6 +173,7 @@ async function trackClick(shortCode, requestData) {
     deviceType,
   });
 
+  await deleteCachedValue(`url:${shortCode}`);
   return record.originalUrl;
 }
 
@@ -195,53 +228,6 @@ async function getAnalytics(shortCode) {
   };
 }
 
-async function registerUser({ email, password }) {
-  const existingUser = await findUserByEmail(email);
-  if (existingUser) {
-    const error = new Error('User already exists');
-    error.statusCode = 409;
-    throw error;
-  }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await createUser({ email, passwordHash });
-  const token = jwt.sign({ sub: user.id, email: user.email }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '1h' });
-
-  return {
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-    },
-  };
-}
-
-async function loginUser({ email, password }) {
-  const user = await findUserByEmail(email);
-  if (!user) {
-    const error = new Error('Invalid credentials');
-    error.statusCode = 401;
-    throw error;
-  }
-
-  const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-  if (!isValidPassword) {
-    const error = new Error('Invalid credentials');
-    error.statusCode = 401;
-    throw error;
-  }
-
-  const token = jwt.sign({ sub: user.id, email }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '1h' });
-
-  return {
-    token,
-    user: {
-      id: user.id,
-      email: user.email,
-    },
-  };
-}
-
 module.exports = {
   createShortUrl,
   getOriginalUrlByShortCode,
@@ -250,6 +236,4 @@ module.exports = {
   deleteUrl,
   trackClick,
   getAnalytics,
-  registerUser,
-  loginUser,
 };
