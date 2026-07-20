@@ -4,7 +4,7 @@
   "description": "A production-ready URL Shortener backend built with **Node.js**, **Express.js**, and **PostgreSQL**. This project is inspired by services like **Bit.ly** and is designed to demonstrate backend engineering skills including REST API development, database design, authentication, caching, analytics, rate limiting, and scalable architecture.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test test/*.test.js",
     "start": "nodemon app.js"
   },
   "keywords": [],

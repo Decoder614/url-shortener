@@ -1,4 +1,4 @@
-const { createShortUrl, getOriginalUrlByShortCode } = require('../services/urlService');
+const { createShortUrl, getOriginalUrlByShortCode, getUrlById, updateUrl, deleteUrl } = require('../services/urlService');
 
 async function createUrl(req, res, next) {
   try {
@@ -26,7 +26,54 @@ async function redirectUrl(req, res, next) {
   }
 }
 
+async function getUrl(req, res, next) {
+  try {
+    const { id } = req.params;
+    const record = await getUrlById(id);
+
+    if (!record) {
+      const error = new Error('URL not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    return res.status(200).json(record);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateUrlRecord(req, res, next) {
+  try {
+    const { id } = req.params;
+    const record = await updateUrl(id, req.body);
+    return res.status(200).json(record);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function deleteUrlRecord(req, res, next) {
+  try {
+    const { id } = req.params;
+    const deleted = await deleteUrl(id);
+
+    if (!deleted) {
+      const error = new Error('URL not found');
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    return res.status(200).json({ message: 'URL deleted successfully' });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   createUrl,
   redirectUrl,
+  getUrl,
+  updateUrlRecord,
+  deleteUrlRecord,
 };
