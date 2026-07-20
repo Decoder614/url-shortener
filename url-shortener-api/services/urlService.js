@@ -13,7 +13,7 @@ function generateShortCode(length = 6) {
   return code;
 }
 
-function createShortUrl({ originalUrl, customAlias }) {
+async function createShortUrl({ originalUrl, customAlias }) {
   if (!isValidHttpUrl(originalUrl)) {
     const error = new Error('Invalid URL');
     error.statusCode = 400;
@@ -22,21 +22,20 @@ function createShortUrl({ originalUrl, customAlias }) {
 
   const shortCode = (customAlias && customAlias.trim()) || generateShortCode();
 
-  if (findByShortCode(shortCode)) {
+  const existing = await findByShortCode(shortCode);
+  if (existing) {
     const collisionError = new Error('Short code already exists');
     collisionError.statusCode = 409;
     throw collisionError;
   }
 
   const urlRecord = {
-    id: Date.now().toString(),
     originalUrl,
     shortCode,
     shortUrl: `http://localhost:3000/${shortCode}`,
   };
 
-  saveUrl(urlRecord);
-  return urlRecord;
+  return saveUrl(urlRecord);
 }
 
 module.exports = {

@@ -1,5 +1,31 @@
+# Dependencies
 node_modules/
-**/node_modules/
-.git-backup/
-**/.git-backup/
+
+# Environment files
 .env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build/output folders
+/dist/
+/build/
+
+# Docker compose overrides (optional)
+/docker-compose.override.yml
+
+# App-specific local artifacts
+url-shortener-api/.env
+url-shortener-api/node_modules/
+url-shortener-api/dist/
+url-shortener-api/build/
+
+# Keep the app source tracked unless you want to ignore it too
+# url_shortener_app/
