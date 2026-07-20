@@ -159,6 +159,37 @@ test('GET /api/v1/analytics/:shortCode tracks clicks and visitor details', async
   }
 });
 
+test('POST /api/v1/urls accepts expiration dates and rejects expired values', async () => {
+  const server = await startServer();
+  const address = server.address();
+
+  try {
+    const futureDate = new Date(Date.now() + 60_000).toISOString();
+    const createResponse = await fetch(`http://127.0.0.1:${address.port}/api/v1/urls`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ originalUrl: 'https://example.com/expiring', expiresAt: futureDate })
+    });
+
+    assert.equal(createResponse.status, 201);
+    const created = await createResponse.json();
+    assert.equal(created.expiresAt, futureDate);
+
+    const pastDate = new Date(Date.now() - 60_000).toISOString();
+    const invalidResponse = await fetch(`http://127.0.0.1:${address.port}/api/v1/urls`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ originalUrl: 'https://example.com/expired', expiresAt: pastDate })
+    });
+
+    assert.equal(invalidResponse.status, 400);
+    const invalidBody = await invalidResponse.json();
+    assert.equal(invalidBody.message, 'Expiration date must be in the future');
+  } finally {
+    server.close();
+  }
+});
+
 test('register/login enables authenticated URL ownership', async () => {
   const server = await startServer();
   const address = server.address();

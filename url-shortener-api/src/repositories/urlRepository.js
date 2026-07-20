@@ -2,8 +2,8 @@ const { pool } = require('../config/db');
 
 async function saveUrl(urlRecord) {
   const result = await pool.query(
-    'INSERT INTO urls (original_url, short_code, short_url, user_id) VALUES ($1, $2, $3, $4) RETURNING id, original_url AS "originalUrl", short_code AS "shortCode", short_url AS "shortUrl", created_at AS "createdAt", user_id AS "userId";',
-    [urlRecord.originalUrl, urlRecord.shortCode, urlRecord.shortUrl, urlRecord.userId || null]
+    'INSERT INTO urls (original_url, short_code, short_url, expires_at, user_id) VALUES ($1, $2, $3, $4, $5) RETURNING id, original_url AS "originalUrl", short_code AS "shortCode", short_url AS "shortUrl", expires_at AS "expiresAt", created_at AS "createdAt", user_id AS "userId";',
+    [urlRecord.originalUrl, urlRecord.shortCode, urlRecord.shortUrl, urlRecord.expiresAt || null, urlRecord.userId || null]
   );
 
   return result.rows[0];
@@ -11,7 +11,7 @@ async function saveUrl(urlRecord) {
 
 async function findByShortCode(shortCode) {
   const result = await pool.query(
-    'SELECT id, original_url AS "originalUrl", short_code AS "shortCode", short_url AS "shortUrl", user_id AS "userId" FROM urls WHERE short_code = $1 LIMIT 1;',
+    'SELECT id, original_url AS "originalUrl", short_code AS "shortCode", short_url AS "shortUrl", expires_at AS "expiresAt", user_id AS "userId" FROM urls WHERE short_code = $1 LIMIT 1;',
     [shortCode]
   );
 
@@ -20,7 +20,7 @@ async function findByShortCode(shortCode) {
 
 async function findById(id) {
   const result = await pool.query(
-    'SELECT id, original_url AS "originalUrl", short_code AS "shortCode", short_url AS "shortUrl", created_at AS "createdAt", user_id AS "userId" FROM urls WHERE id = $1 LIMIT 1;',
+    'SELECT id, original_url AS "originalUrl", short_code AS "shortCode", short_url AS "shortUrl", expires_at AS "expiresAt", created_at AS "createdAt", user_id AS "userId" FROM urls WHERE id = $1 LIMIT 1;',
     [id]
   );
 
@@ -46,6 +46,11 @@ async function updateById(id, updates) {
     values.push(updates.shortUrl);
   }
 
+  if (updates.expiresAt !== undefined) {
+    fields.push('expires_at = $' + (values.length + 2));
+    values.push(updates.expiresAt);
+  }
+
   if (fields.length === 0) {
     return findById(id);
   }
@@ -53,7 +58,7 @@ async function updateById(id, updates) {
   values.unshift(id);
 
   const result = await pool.query(
-    `UPDATE urls SET ${fields.join(', ')} WHERE id = $1 RETURNING id, original_url AS "originalUrl", short_code AS "shortCode", short_url AS "shortUrl", created_at AS "createdAt", user_id AS "userId";`,
+    `UPDATE urls SET ${fields.join(', ')} WHERE id = $1 RETURNING id, original_url AS "originalUrl", short_code AS "shortCode", short_url AS "shortUrl", expires_at AS "expiresAt", created_at AS "createdAt", user_id AS "userId";`,
     values
   );
 

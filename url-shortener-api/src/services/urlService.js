@@ -1,4 +1,4 @@
-const { isValidHttpUrl, isValidCustomAlias } = require('../validators/urlValidator');
+const { isValidHttpUrl, isValidCustomAlias, isValidExpirationDate } = require('../validators/urlValidator');
 const { saveUrl, findByShortCode, findById, updateById, deleteById, recordClick, getAnalyticsByShortCode } = require('../repositories/urlRepository');
 const { getCachedValue, setCachedValue, deleteCachedValue } = require('../config/redis');
 
@@ -14,7 +14,7 @@ function generateShortCode(length = 6) {
   return code;
 }
 
-async function createShortUrl({ originalUrl, customAlias, userId }) {
+async function createShortUrl({ originalUrl, customAlias, expiresAt, userId }) {
   if (!isValidHttpUrl(originalUrl)) {
     const error = new Error('Invalid URL');
     error.statusCode = 400;
@@ -23,6 +23,12 @@ async function createShortUrl({ originalUrl, customAlias, userId }) {
 
   if (customAlias !== undefined && !isValidCustomAlias(customAlias)) {
     const error = new Error('Invalid custom alias');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!isValidExpirationDate(expiresAt)) {
+    const error = new Error('Expiration date must be in the future');
     error.statusCode = 400;
     throw error;
   }
@@ -40,6 +46,7 @@ async function createShortUrl({ originalUrl, customAlias, userId }) {
     originalUrl,
     shortCode,
     shortUrl: `http://localhost:3000/${shortCode}`,
+    expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
     userId: userId || null,
   };
 
@@ -54,7 +61,17 @@ async function getOriginalUrlByShortCode(shortCode) {
   }
 
   const record = await findByShortCode(shortCode);
-  const originalUrl = record ? record.originalUrl : null;
+  if (!record) {
+    return null;
+  }
+
+  if (record.expiresAt && new Date(record.expiresAt).getTime() <= Date.now()) {
+    await deleteById(record.id);
+    await deleteCachedValue(cacheKey);
+    return null;
+  }
+
+  const originalUrl = record.originalUrl;
 
   if (originalUrl) {
     await setCachedValue(cacheKey, originalUrl, 300);
@@ -104,6 +121,12 @@ async function updateUrl(id, payload, userId) {
     throw error;
   }
 
+  if (payload.expiresAt !== undefined && !isValidExpirationDate(payload.expiresAt)) {
+    const error = new Error('Expiration date must be in the future');
+    error.statusCode = 400;
+    throw error;
+  }
+
   const existing = await findById(id);
   if (!existing) {
     const error = new Error('URL not found');
@@ -118,6 +141,10 @@ async function updateUrl(id, payload, userId) {
 
   if (payload.customAlias !== undefined) {
     updates.shortCode = payload.customAlias.trim();
+  }
+
+  if (payload.expiresAt !== undefined) {
+    updates.expiresAt = payload.expiresAt ? new Date(payload.expiresAt).toISOString() : null;
   }
 
   const updated = await updateById(id, updates);

@@ -16,6 +16,7 @@ async function initDb() {
       original_url TEXT NOT NULL,
       short_code VARCHAR(50) UNIQUE NOT NULL,
       short_url TEXT NOT NULL,
+      expires_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT NOW()
     );
   `);
@@ -46,6 +47,10 @@ async function initDb() {
 
   await pool.query(`
     ALTER TABLE urls ADD COLUMN IF NOT EXISTS user_id INT REFERENCES users(id) ON DELETE CASCADE;
+  `);
+
+  await pool.query(`
+    ALTER TABLE urls ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
   `);
 }
 
