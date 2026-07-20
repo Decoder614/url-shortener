@@ -49,3 +49,22 @@ test('POST /api/v1/urls rejects invalid URLs', async () => {
     server.close();
   }
 });
+
+test('POST /api/v1/urls rejects invalid custom aliases', async () => {
+  const server = await startServer();
+  const address = server.address();
+
+  try {
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/v1/urls`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ originalUrl: 'https://example.com', customAlias: 'bad alias!' })
+    });
+
+    assert.equal(response.status, 400);
+    const data = await response.json();
+    assert.equal(data.message, 'Invalid custom alias');
+  } finally {
+    server.close();
+  }
+});

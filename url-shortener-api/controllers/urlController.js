@@ -1,26 +1,28 @@
 const { createShortUrl, getOriginalUrlByShortCode } = require('../services/urlService');
 
-async function createUrl(req, res) {
+async function createUrl(req, res, next) {
   try {
     const urlRecord = await createShortUrl(req.body);
     return res.status(201).json(urlRecord);
   } catch (error) {
-    return res.status(error.statusCode || 500).json({ message: error.message });
+    return next(error);
   }
 }
 
-async function redirectUrl(req, res) {
+async function redirectUrl(req, res, next) {
   try {
     const { shortCode } = req.params;
     const originalUrl = await getOriginalUrlByShortCode(shortCode);
 
     if (!originalUrl) {
-      return res.status(404).json({ message: 'URL not found' });
+      const error = new Error('URL not found');
+      error.statusCode = 404;
+      return next(error);
     }
 
     return res.redirect(302, originalUrl);
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    return next(error);
   }
 }
 

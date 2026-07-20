@@ -1,4 +1,4 @@
-const { isValidHttpUrl } = require('../validators/urlValidator');
+const { isValidHttpUrl, isValidCustomAlias } = require('../validators/urlValidator');
 const { saveUrl, findByShortCode } = require('../repositories/urlRepository');
 
 function generateShortCode(length = 6) {
@@ -16,6 +16,12 @@ function generateShortCode(length = 6) {
 async function createShortUrl({ originalUrl, customAlias }) {
   if (!isValidHttpUrl(originalUrl)) {
     const error = new Error('Invalid URL');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (customAlias !== undefined && !isValidCustomAlias(customAlias)) {
+    const error = new Error('Invalid custom alias');
     error.statusCode = 400;
     throw error;
   }

@@ -2,6 +2,7 @@ const express = require('express');
 const urlRoutes = require('./routes/urlRoutes');
 const { initDb } = require('./config/db');
 const { redirectUrl } = require('./controllers/urlController');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.get('/', (req, res) => {
 
 app.get('/:shortCode', redirectUrl);
 app.use('/api/v1/urls', urlRoutes);
+app.use(errorHandler);
 
 async function startServer() {
     await initDb();
