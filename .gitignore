@@ -26,6 +26,7 @@ url-shortener-api/.env
 url-shortener-api/node_modules/
 url-shortener-api/dist/
 url-shortener-api/build/
+url-shortener-api/.git-backup/
 
 # Keep the app source tracked unless you want to ignore it too
 # url_shortener_app/

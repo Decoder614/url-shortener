@@ -38,6 +38,12 @@ async function createShortUrl({ originalUrl, customAlias }) {
   return saveUrl(urlRecord);
 }
 
+async function getOriginalUrlByShortCode(shortCode) {
+  const record = await findByShortCode(shortCode);
+  return record ? record.originalUrl : null;
+}
+
 module.exports = {
   createShortUrl,
+  getOriginalUrlByShortCode,
 };

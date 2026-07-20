@@ -1,6 +1,7 @@
 const express = require('express');
 const urlRoutes = require('./routes/urlRoutes');
 const { initDb } = require('./config/db');
+const { redirectUrl } = require('./controllers/urlController');
 
 const app = express();
 
@@ -10,6 +11,7 @@ app.get('/', (req, res) => {
     res.send('URL Shortener API created by Jaydip');
 });
 
+app.get('/:shortCode', redirectUrl);
 app.use('/api/v1/urls', urlRoutes);
 
 async function startServer() {
